@@ -1,0 +1,227 @@
+San José State University 1 Fall 2017
+CS218
+
+Lab #1 – Introduction to Private Infrastructure-as-a-Service
+Welcome
+Welcome to the first lab of CS218. The goal of each lab is to provide a solid background in practical cloud computing
+concepts and prepare students for Project #2.
+Each lab builds on the experiences of the one before it and as such it is the responsibility of the student to ensure they
+fully understand every lab assignment and seek help as soon as possible if they have problems.
+Administrative
+The following guidelines apply to all labs in CS218
+• Each lab is due by the date announced in slack.
+• No late labs will be accepted (no exceptions).
+• Each lab is to be done by the student alone (no group projects), unless TA allows a group research. Students may
+help each other; however every student is responsible for their own work.
+Additionally the labs assume an intermediate/advance knowledge of Unix/Linux. If this is your first time interacting with
+Unix it is your responsibility to seek out help either via online sources or slack. If you have any concerns please consult
+the instructor.
+My email is: cs218sjsu.f16@gmail.com
+The labs will be posted on Slack ( https://sjsucs218f16.slack.com ). Students are encouraged to use this system to discuss
+any lab related issues.
+Background
+Vagrant is an open source software tool used to quickly create (and destroy) virtual machines (VM). It is a wrapper
+around several technologies but for this first lab we will focus on installation and basic VM creation.
+Goal of Lab
+• Install and configure Virtualbox
+• Install and configure Vagrant
+• Use shell to configure a new VMs
+San José State University 2 Fall 2017
+Part 1 – Installation and Configuration of Vagrant and Virtualbox
+This lab was prepared using Windows host and PuTTy was used to to establish SSH communication with guest systems.
+However, if you prefer, you can do the whole lab in Linux environment (the host) and use Linux ssh instead of PuTTY,
+that is OK. In the next lab we do everything in Linux environment.
+1. Download and install VirtualBox (accept defaults ) ( tested version 5.1.2 )
+2. Download and install Vagrant (accept defaults) ( tested version 1.8.5 )
+3. Download PuTTy and PuTTYgen ( tested version 0.67 )
+Open Command prompt
+4. Create a folder named trusty64 in any directory you like.
+5. Change directory into that folder (in command prompt).
+6. Type the following commands (note, the first command will take anywhere from 20 minutes to an hour
+depending on your Internet connection speed.)
+vagrant box add ubuntu/trusty64
+(If your CPU is 32bit then use trusty32)
+Initialize the current directory to be a vagrant environment by creating an initial Vagrantfile if one doesn’t
+already exist:
+vagrant init ubuntu/trusty64
+Boot your first guest machine by running:
+vagrant up
+7. At this point your VM is up and running. You can check the status of a VM at any time by running
+vagrant status
+Useful commands:
+vagrant suspend
+vagrant resume
+vagrant halt
+vagrant up
+vagrant destroy (Be careful to use “vagrant destroy”, since your VM will be destroyed.)
+8. To login to the VM download and open PuTTY. 
+San José State University 3 Fall 2017
+9. Click Open
+10. Click Yes, on security alert.
+11. Login using the following credentials:
+Login: vagrant
+Password: vagrant
+12. You should see the following on your screen:
+San José State University 4 Fall 2017
+At this point you have successfully created your first VM using Vagrant.
+Logout of your VM using the command:
+exit
+13. Download PuTTYgen and open it.
+14. Click on File -> Load Private Key
+The file we are looking for is in the ~\trusty64\.vagrant\machines\default\virtualbox folder
+(which was automatically created when you installed and configured Vagrant).
+Change the visibility to “All Files” and select private_key
+Click OK, on the following success message.
+15. Click “Save Private Key”, then click Yes in the pop-up window.
+16. Save it in any directory for example ~/lucid32. Give it the following name: putty_key
+17. Close PuTTYgen
+18. Open PuTTY. Click on Connection -> Data. Type “vagrant” in the Auto-login username field.
+San José State University 5 Fall 2017
+19. Now click on Connection -> SSH -> Auth
+20. Click on Browse and locate the “putty_key” file you created earlier.
+Click on Session. Fill in the following three fields 
+San José State University 6 Fall 2017
+Host Name (or IP address) localhost
+Port 2222
+Saved Sessions vagrant
+Click “Save”. You should now see a session called “vagrant” beneath “Default Settings”
+21. Bring up a VM instance. Once it’s up, double click on the vagrant session you just created in PuTTY. You should
+be logged in immediately without having to enter any credentials.
+Logout and destroy the instance when you are done.
+San José State University 7 Fall 2017
+Part 2 - Puppet support in Vagrant
+Puppet is a tool designed to manage the configuration of Unix-like and Microsoft Windows systems declaratively. The
+user describes system resources and their state, either using Puppet's declarative language or a Ruby DSL (domainspecific
+language). This information is stored in files called "Puppet manifests". Puppet discovers the system information
+via a utility called Facter, and compiles the Puppet manifests into a system-specific catalog containing resources and
+resource dependency, which are applied against the target systems. Any actions taken by Puppet are then reported.
+1. Make sure you are in the trusty64 directory you created earlier.
+2. Open “Vagrantfile” using a text editor.
+3. Change the content as follow and save it.
+Vagrant.configure(2) do |config|
+config.vm.box = "ubuntu/trusty64"
+config.vm.provision "puppet" do |puppet|
+puppet.manifests_path = "manifests"
+puppet.manifest_file = "site.pp"
+end
+end
+Create a folder called manifests. Create an empty file called “site.pp” in the manifests directory you just
+created.
+4. Open “site.pp” using a text editor.
+5. Copy and paste the following text, and save it.
+file {
+'/etc/motd':
+content => "Hello CS218! Welcome to puppet.\n"
+}
+San José State University 8 Fall 2017
+6. Recreate the VM (use commands “vagrant destroy” and “vagrant up”) and login to the VM using PuTTY.
+Note: after you recreate the VM, most likely the SSH key will be different and you will be required to provide
+user/password information (vagrant/vagrant)
+You should see the following greeting:
+Part 3 – Advanced Configuration (puppet and shell) – Automated Webserver (apache2) Deployment
+In this we use two approaches to install apache so that you know there are more than one way to configure a VM via
+vagrant. In this lab you MUST execute both.
+➢ First
+1. Open “site.pp” using a text editor and modify the content as follow,
+package {
+"apache2":
+ensure => installed
+}
+exec { "apt-update":
+command => "/usr/bin/apt-get update"
+}
+Exec["apt-update"] -> Package <| |>
+2. Recreate the VM and log back then run the following command (note: in the following command “O” is
+capitalized)
+wget -qO- 127.0.0.1
+3. Describe what you see.
+4. Logout and destroy.
+➢ Second
+1. Now change content of Vagrantfile as follow,
+Vagrant.configure(2) do |config|
+San José State University 9 Fall 2017
+config.vm.box = "ubuntu/trusty64"
+config.vm.provision "shell", path: "script.sh"
+# config.vm.provision "puppet" do |puppet|
+# puppet.manifests_path = "manifests"
+# puppet.manifest_file = "site.pp"
+# end
+end
+Create script.sh file in ~/trusty64 and save it as follow,
+#!/usr/bin/env bash
+sudo apt-get update -y
+sudo apt-get install -y apache2
+2. Recreate VM and type wget -qO- 127.0.0.1
+3. Describe what you see.
+4. Logout and destroy.
+Now, depend on your chosen option for configuration you have apache webserver up and running. By default there is no
+way to access the default webserver port (port 80) from your computer so we make the following updates in Vagrant.
+5. Open “Vagrantfile” using a text editor. Add the following line.
+config.vm.network :forwarded_port, guest: 80, host: 8080
+6. Open a browser and go to the following URL: http://localhost:8080
+7. Take a snapshot of the page in browser and put in report.
+8. Logout and destroy the VM.
+Now, we are going to change the content of index.html for our webserver. Here I show you with puppet.
+1. Append the following lines in puppet,
+file {
+'/var/www/html/index.html':
+content => "<html><body>I love <b>SJSU!</b></body></html>",
+require => Package["apache2"],
+}
+2. Recreate the VM and open a browser and go to the following URL: http://localhost:8080.
+3. Take a screenshot of browser and put it in report.
+4. Logout and destroy the VM.
+❖ I want you to find a way through shell scripting to modify the index.html. In your report mention the changed
+in Vagrantfile and put your modified version of script.sh in report.
+Part 4 –Multi-VM Environment
+In the previous section we built and customized a web server. In this section we will build an additional VM that will be
+launched for a total of two VM instances.
+San José State University 10 Fall 2017
+1. Open “Vagrantfile” using a text editor. Replace the entire contents of the file with the configuration file below.
+The differences between the first and second VM configuration have been highlighted for clarity.
+Vagrant.configure("2") do |config|
+config.vm.define “web” do |web|
+web.vm.box = "ubuntu/trusty64"
+web.vm.network :forwarded_port, guest: 80, host: 8080
+web.vm.provision :puppet do |puppet|
+puppet.manifests_path = "manifests"
+puppet.manifest_file = "site.pp"
+end
+end
+config.vm.define “db” do |db|
+db.vm.box = "ubuntu/trusty64"
+db.vm.network :forwarded_port, guest: 80, host: 8081
+db.vm.provision :puppet do |puppet|
+puppet.manifests_path = "manifests"
+puppet.manifest_file = "myweb.pp"
+#remember you can use shell instead of puppet!
+end
+end
+end
+2. Navigate to the manifests folder in your home directory. Make a copy of “site.pp” and name it “myweb.pp” and
+make the following changes,
+Before
+content => "<html><body>I love <b>SJSU!</b></body></html>",
+After
+content => "<html><body>I love <b>CS218!</b></body></html>",
+3. Recreate the VM, open the browser and go to http://localhost:8080 and http://localhost:8081 and take a
+screenshot of your browser for each page and put in your report.
+Exercises
+❖ Modify the vagrant file so that “db” VM use another operation system except “ubuntu/trusty64” (First you need
+to go to Vagrant tutorial and find the list of available OS for virtual box). In your report mention which OS you
+have chosen, also when you login into “db” VM take a screenshot of terminal after login so I can see the name
+of OS and put it in report.
+Change the Vagrantfile so “db” VM install MySql not apache. It is up to you whether you want to use shell or
+puppet!
+Note: you might need to increase VM boot timeout value by configuring “config.vm.boot_timeout” in
+Vagrantfile in case you encounter timeout when you run “vagrant up” .
+❖ Take a screen shot after running ‘vagrant box list’ command.
+❖ Put the contents of your Vagrantfile in report. The contents of manifests/site.pp OR your script.
+❖ Put the contents of manifests/myweb.pp in report OR your script.
+San José State University 11 Fall 2017
+❖ Take a screen shot after logging in to “db” VM and running ‘mysql –u root’ command. (Note: You can
+figure out the port for “db” in the boot log)
+Deliverables
+• Create a {Microsoft Word| PDF} document containing the answers to questions and texts in red.
+• Name the file <Last Name>_<First Name>_Lab01.{docx|pdf}
+• Send the file to me via slack private message 
